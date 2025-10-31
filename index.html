@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Img2ASCII tool</title>
+<style>
+  body {
+    background-color: #000;
+    color: #fff;
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Logo top-left */
+  .logo {
+    position: fixed;
+    top: 20px;
+    left: 25px;
+    width: 80px;
+    z-index: 10;
+  }
+
+  /* Main container */
+  .container {
+    background-color: #1c1c1c;
+    padding: 25px;
+    border-radius: 18px;
+    width: 95%;
+    max-width: 1000px;
+    margin-top: 120px;
+    text-align: center;
+    box-shadow: 0 0 20px rgba(255,255,255,0.08);
+  }
+
+  input[type="file"], select, input[type="range"] {
+    background: #2a2a2a;
+    color: #fff;
+    border: none;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 10px;
+    width: 100%;
+    cursor: pointer;
+  }
+
+  #asciiOutput {
+    white-space: pre;
+    font-family: monospace;
+    overflow-x: auto;
+    margin-top: 20px;
+    background: #000;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: left;
+    font-size: 8px;
+  }
+
+  button {
+    background-color: #4caf50;
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    margin: 8px;
+    font-weight: 500;
+  }
+
+  button:hover {
+    background-color: #3e8e41;
+  }
+
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  @media (min-width: 768px) {
+    .controls {
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+    }
+    input[type="file"], select, input[type="range"] {
+      width: auto;
+      flex: 1;
+    }
+  }
+</style>
+</head>
+<body>
+
+<img src="logo.png" class="logo" alt="Parthiv Gajjar logo">
+
+<div class="container">
+  <h2>Img2ASCII</h2>
+  <div class="controls">
+    <input type="file" id="imageInput" accept="image/*">
+    <label for="scaleRange">Scale:</label>
+    <input type="range" id="scaleRange" min="2" max="10" value="5">
+    <select id="asciiType">
+      <option value="text">Text ASCII</option>
+      <option value="dots">Dots ASCII</option>
+    </select>
+  </div>
+
+  <button onclick="convertToASCII()">Convert</button>
+  <button onclick="copyToClipboard()">Copy ASCII</button>
+  
+  <pre id="asciiOutput"></pre>
+</div>
+
+<script>
+function convertToASCII() {
+  const fileInput = document.getElementById('imageInput');
+  const asciiOutput = document.getElementById('asciiOutput');
+  const scale = parseInt(document.getElementById('scaleRange').value);
+  const asciiType = document.getElementById('asciiType').value;
+
+  if (!fileInput.files[0]) {
+    alert('Please upload an image first!');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const width = Math.floor(img.width / scale);
+      const height = Math.floor(img.height / scale);
+      canvas.width = width;
+      canvas.height = height;
+      ctx.drawImage(img, 0, 0, width, height);
+      const imgData = ctx.getImageData(0, 0, width, height);
+
+      const chars = asciiType === "text" ? "@#S%?*+;:,. " : "●•· ";
+      let ascii = "";
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const i = (y * width + x) * 4;
+          const r = imgData.data[i];
+          const g = imgData.data[i + 1];
+          const b = imgData.data[i + 2];
+          const alpha = imgData.data[i + 3];
+          
+          // Ignore transparent background for PNG
+          if (alpha < 128) {
+            ascii += " ";
+            continue;
+          }
+
+          const avg = (r + g + b) / 3;
+          const charIndex = Math.floor((avg / 255) * (chars.length - 1));
+          ascii += chars[charIndex];
+        }
+        ascii += "\n";
+      }
+      asciiOutput.textContent = ascii;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(fileInput.files[0]);
+}
+
+function copyToClipboard() {
+  const asciiText = document.getElementById('asciiOutput').textContent;
+  if (!asciiText.trim()) {
+    alert('No ASCII art to copy!');
+    return;
+  }
+  navigator.clipboard.writeText(asciiText)
+    .then(() => alert('ASCII art copied to clipboard!'))
+    .catch(err => alert('Failed to copy: ' + err));
+}
+</script>
+
+</body>
+</html>
